@@ -26,16 +26,19 @@ import concurrent.futures
 import threading 
 
 inputs      = Input( shape=(100,256) ) 
-encoded     = Bi( GRU(300, return_sequences=False, dropout=0.1, recurrent_dropout=0.1) )( inputs )
+encoded     = Bi( GRU(300, activation='relu', return_sequences=False, dropout=0.1, recurrent_dropout=0.1) )( inputs )
 encoded     = Dense(2012, activation='relu')( encoded )
-encoded     = Dense(1012, activation='softmax')( encoded )
+encoded     = Dense(2012, activation='relu')( encoded )
+encoded     = Dense(1012, activation='tanh')( encoded )
 encoder     = Model(inputs, encoded)
 
-decoded_1   = Bi( GRU(300, dropout=0.1, recurrent_dropout=0.1, return_sequences=True) )( RepeatVector(100)( encoded ) )
+decoded_1   = Bi( GRU(300, activation='relu', dropout=0.1, recurrent_dropout=0.1, return_sequences=True) )( RepeatVector(100)( encoded ) )
+decoded_1   = TD( Dense(2024, activation='relu') )( decoded_1 )
 decoded_1   = TD( Dense(2024, activation='relu') )( decoded_1 )
 decoded_1   = TD( Dense(256, activation='linear') )( decoded_1 )
 
-decoded_2   = Bi( GRU(300, dropout=0.1, recurrent_dropout=0.1, return_sequences=True) )( RepeatVector(100)( encoded ) )
+decoded_2   = Bi( GRU(300, activation='relu', dropout=0.1, recurrent_dropout=0.1, return_sequences=True) )( RepeatVector(100)( encoded ) )
+decoded_2   = TD( Dense(2024, activation='relu') )( decoded_2 )
 decoded_2   = TD( Dense(2024, activation='relu') )( decoded_2 )
 decoded_2   = TD( Dense(256, activation='linear') )( decoded_2 )
 
@@ -59,18 +62,18 @@ def train():
     Xs.append(x)
     ys1.append(y1)
     ys2.append(y2)
-  Xs, ys1, ys2 = map(lambda x:np.array(x)*10.0, [Xs, ys1, ys2])
+  Xs, ys1, ys2 = map(lambda x:np.array(x), [Xs, ys1, ys2])
   
   decay =  0.005
   for count in range(200):
     skipthought.optimizer = Adam(lr=0.0001*(1.0 - count*decay))
     skipthought.fit( Xs, [ys1, ys2], \
                           epochs=1,\
-                          batch_size=128, \
+                          batch_size=300, \
                           validation_split=0.02, \
                           callbacks=[batch_callback] )
     loss = buff['loss']
-    skipthought.save_weights('models/%09f_%09d.h5'%(loss,count,))
+    skipthought.save_weights('models/%0.09f_%09d.h5'%(loss,count,))
 
 def predict():
   to_load = sorted( glob.glob('../models/*.h5') ).pop() 
