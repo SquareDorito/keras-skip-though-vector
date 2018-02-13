@@ -65,15 +65,17 @@ def train():
   Xs, ys1, ys2 = map(lambda x:np.array(x), [Xs, ys1, ys2])
   
   decay =  0.005
+  baseline = 0.0001
   for count in range(200):
-    skipthought.optimizer = Adam(lr=0.0001*(1.0 - count*decay))
+    lr = baseline*(1.0 - count*decay)
+    skipthought.optimizer = Adam(lr=lr)
     skipthought.fit( Xs, [ys1, ys2], \
                           epochs=1,\
                           batch_size=300, \
                           validation_split=0.02, \
                           callbacks=[batch_callback] )
     loss = buff['loss']
-    skipthought.save_weights('models/%0.09f_%09d.h5'%(loss,count,))
+    skipthought.save_weights('models/%0.09f_%0.12f_%09d.h5'%(loss,lr, count,))
 
 def predict():
   to_load = sorted( glob.glob('../models/*.h5') ).pop() 
